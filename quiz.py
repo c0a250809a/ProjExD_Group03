@@ -59,6 +59,7 @@ class QuizGame:
         self.question_font = pygame.font.Font(font_path, 40)
         self.choice_font = pygame.font.Font(font_path, 30)
         self.result_font = pygame.font.Font(font_path, 36)
+        self.timer_font = pygame.font.Font(font_path, 36) #　タイマー用のフォントの追加
 
         # 色
         self.WHITE = (255, 255, 255)
@@ -110,6 +111,11 @@ class QuizGame:
         self.answered = False
         self.message = ""
 
+        #　タイマー用の変数
+        self.LIMIT_TIME = 10.0
+        self.start_time = 0
+        self.remaining_time = self.LIMIT_TIME
+
         self.next_quiz()
 
     # --------------------------
@@ -120,6 +126,28 @@ class QuizGame:
         self.current_quiz = random.choice(self.quizzes)
         self.answered = False
         self.message = ""
+        self.start_time = pygame.time.get_ticks() #　出題したときの時間を記録
+
+    # --------------------------
+    # タイマー更新・判定
+    # --------------------------
+    def update_timer(self):
+        """
+        未回答の場合に経過時間を計算してカウントダウンし、タイムアップを判定するメソッド
+        引数：なし
+        戻り値：なし
+        """
+        if not self.answered:
+            elapsed_seconds = (pygame.time.get_ticks() - self.start_time) / 1000
+            self.remaining_time = max(0.0, self.LIMIT_TIME - elapsed_seconds)
+
+            #　タイムアップ判定
+            if self.remaining_time <= 0:
+                self.answered = True
+                answer = self.current_quiz.choices[self.current_quiz.answer]
+                self.mesage = f"タイムアップ！　正解は「{answer}」"
+        else:
+            self.remaining_time = 0.0
 
     # --------------------------
     # 描画
@@ -135,6 +163,15 @@ class QuizGame:
         )
 
         self.screen.blit(question, (40, 50))
+
+        #　タイマー表示(問題の上に表示。残り3秒になると文字が赤くなる)
+        timer_color = self.RED if self.remaining_time <= 3.0 else self.BLACK
+        timer_text = self.timer_font.render(
+            f"残り時間：{self.remaining_time:.1f}秒",
+            True,
+            timer_color
+        )
+        self.screen.blit(timer_text, (40,10))
 
         for i in range(4):
 
@@ -212,6 +249,9 @@ class QuizGame:
         while True:
 
             self.event()
+
+            self.update_timer() #　更新・判定をする
+    
             self.draw()
 
             clock.tick(60)
