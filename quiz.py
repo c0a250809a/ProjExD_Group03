@@ -31,6 +31,34 @@ class Button:
 
     def is_clicked(self, pos):
         return self.rect.collidepoint(pos)
+    
+class Fiftyfifty:
+    """
+    Fiftyfiftyクラス
+    クイズの選択肢を半分に減らすライフライン
+    """
+    def __init__(self,quiz: Quiz) -> None:
+        """
+        引数:Quizクラス
+        戻り値:なし
+        答えの選択肢をQuizクラスから取得、
+        現在の選択肢から正解とランダムに選ばれた不正解の選択肢以外を削除
+        """
+        answer = quiz.answer
+        self.choices = [False,False,False,False]
+        miss = [0,1,2,3]
+        miss.remove(answer)
+
+        self.choices[answer] = True  # Trueの選択肢は残る
+        self.choices[random.choice(miss)] = True
+
+    def is_collect(self, index:int) -> list:
+        """
+        引数:int
+        戻り値:list
+        イニシャライザで作った消す選択肢のリストを返す
+        """
+        return self.choices[index]
 
 
 # ==========================
@@ -110,7 +138,22 @@ class QuizGame:
         self.answered = False
         self.message = ""
 
+        self.fifty = None
+        self.fifty_used = False
+
         self.next_quiz()
+
+    def use_fifty(self):
+        """
+        50-50を使う関数
+        使われたならfifty-usedをTrueにし、2回目の使用を不可能にする。
+        """
+        if self.fifty_used:
+            return  # もし使われているならそのまま出る
+        
+        if self.fifty is None:
+            self.fifty = Fiftyfifty(self.current_quiz)
+            self.fifty_used = True
 
     # --------------------------
     # 次の問題
@@ -120,6 +163,8 @@ class QuizGame:
         self.current_quiz = random.choice(self.quizzes)
         self.answered = False
         self.message = ""
+
+        self.fifty = None
 
     # --------------------------
     # 描画
@@ -137,6 +182,10 @@ class QuizGame:
         self.screen.blit(question, (40, 50))
 
         for i in range(4):
+
+            if self.fifty is not None:
+                if not self.fifty.is_collect(i):  # もし使わない選択肢なら、この回のループを終了する
+                    continue
 
             color = self.GRAY
 
@@ -197,8 +246,11 @@ class QuizGame:
 
             elif event.type == pygame.KEYDOWN:
 
-                if self.answered:
+                if event.key == pygame.K_f:  # Fキーが押されたら50-50を使用
+                    self.use_fifty()
 
+
+                if self.answered:
                     if event.key == pygame.K_SPACE:
                         self.next_quiz()
 
