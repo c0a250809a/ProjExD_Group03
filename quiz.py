@@ -98,6 +98,37 @@ class QuizGame:
         self.GREEN = (120, 230, 120)
         self.RED = (255, 120, 120)
 
+        # 音
+        if not pygame.mixer.get_init():
+            pygame.mixer.init()
+
+        # 同じ階層にある「SE」フォルダへのパスを作成
+        se_dir = os.path.join(base_dir, "SE")
+
+        # 効果音ファイルの読み込み
+        try:
+            self.correct_sound = pygame.mixer.Sound(os.path.join(se_dir, "correct.mp3"))
+            self.wrong_sound = pygame.mixer.Sound(os.path.join(se_dir, "wrong.mp3"))
+            self.timeup_sound = pygame.mixer.Sound(os.path.join(se_dir, "wrong.mp3"))
+            self.fiffif_sound = pygame.mixer.Sound(os.path.join(se_dir, "fiffif.mp3"))
+            self.startquiz_sound = pygame.mixer.Sound(os.path.join(se_dir, "startquiz.mp3"))
+            
+            # 音量調整 (0.0 〜 1.0) ※必要に応じて数値を変更してください
+            self.correct_sound.set_volume(0.5)
+            self.wrong_sound.set_volume(0.4)
+            self.timeup_sound.set_volume(0.4)
+            self.fiffif_sound.set_volume(0.7)
+            self.startquiz_sound.set_volume(0.5)
+            
+        except pygame.error as e:
+            print(f"音声ファイルの読み込みに失敗しました: {e}")
+            # ファイルが見つからない場合などにゲームがクラッシュするのを防ぐ
+            self.correct_sound = None
+            self.wrong_sound = None
+            self.timeup_sound = None
+            self.fiffif_sound = None
+            self.startquiz_sound = None
+
         # ゲームの状態管理 ("START", "PLAY", "RESULT")
         self.state = "START"
 
@@ -191,6 +222,8 @@ class QuizGame:
         
         if self.fifty is None:
             self.fifty = Fiftyfifty(self.current_quiz)
+            if self.timeup_sound:
+                self.fiffif_sound.play()
             self.fifty_used = True
 
     # --------------------------
@@ -214,6 +247,8 @@ class QuizGame:
 
         self.fifty = None
         self.start_time = pygame.time.get_ticks() #　出題したときの時間を記録
+        if self.startquiz_sound:
+            self.startquiz_sound.play()
 
     # --------------------------
     # タイマー更新・判定
@@ -233,6 +268,9 @@ class QuizGame:
                 self.answered = True
                 answer = self.current_quiz.choices[self.current_quiz.answer]
                 self.message = f"タイムアップ！　正解は「{answer}」"
+
+                if self.timeup_sound:
+                    self.timeup_sound.play()
         else:
             self.remaining_time = 0.0
 
@@ -379,11 +417,15 @@ class QuizGame:
                                 if i == self.current_quiz.answer:
                                     self.message = "正解！"
                                     self.score += 1
+                                    if self.correct_sound:
+                                        self.correct_sound.play()
                                 else:
                                     answer = self.current_quiz.choices[
                                         self.current_quiz.answer
                                     ]
                                     self.message = f"不正解！ 正解は「{answer}」"
+                                    if self.wrong_sound:
+                                        self.wrong_sound.play()
 
                 elif self.state == "RESULT":
                     if self.retry_button.is_clicked(pos):
